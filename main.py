@@ -104,7 +104,9 @@ def get_config_path(character):
 
 def get_spk_path(character):
     character_dir = get_model_path(ARCHITECTURE_NAME, character)
-    return os.path.join(character_dir, 'singer', character + '.spk.npy')
+    singer_dir = os.path.join(character_dir, 'singer')
+    spk_filename = get_spk_filename(singer_dir)
+    return os.path.join(singer_dir, spk_filename)
 
 
 def get_pth_path(character):
@@ -132,6 +134,17 @@ def get_checkpoint_filename(character_dir):
     if len(potential_names) > 1:
         raise Exception('Too many checkpoint files found! Expected only one file with extension ".pt" in '
                         + character_dir)
+    else:
+        return potential_names[0]
+
+
+def get_spk_filename(singer_dir):
+    potential_names = [file for file in os.listdir(singer_dir) if file.endswith('.spk.npy')]
+    if len(potential_names) == 0:
+        raise Exception('Speaker file was not found! Expected a file with extension ".spk.npy" in ' + singer_dir)
+    if len(potential_names) > 1:
+        raise Exception('Too many speaker files found! Expected only one file with extension ".spk.npy" in '
+                        + singer_dir)
     else:
         return potential_names[0]
 
