@@ -18,14 +18,6 @@ RUN apt update && apt install -y \
     libsndfile1 \
     ffmpeg
 
-# Download the Timbre Encoder
-RUN mkdir -p ~/hay_say/temp_downloads/hubert/ && \
-    wget --load-cookies /tmp/cookies.txt "https://docs.google.com/uc?export=download&confirm=$(wget --quiet --save-cookies /tmp/cookies.txt --keep-session-cookies --no-check-certificate 'https://docs.google.com/uc?export=download&id=1UPjQ2LVSIt3o-9QMKMJcdzT8aZRZCI-E' -O- | sed -rn 's/.*confirm=([0-9A-Za-z_]+).*/\1\n/p')&id=1UPjQ2LVSIt3o-9QMKMJcdzT8aZRZCI-E" -O /root/hay_say/temp_downloads/hubert/best_model.pth.tar && rm -rf /tmp/cookies.txt
-
-# Download the pretrained Whisper model
-RUN mkdir -p ~/hay_say/temp_downloads/whisper_pretrain/ && \
-    wget https://openaipublic.azureedge.net/main/whisper/models/345ae4da62f9b3d59415adc60127b97c714f32e89e936602e85993674d08dcb1/medium.pt --directory-prefix=/root/hay_say/temp_downloads/whisper_pretrain/
-
 # Create virtual environments for so-vits-svc 5.0 and Hay Say's so_vits_svc_5_server
 RUN python3.8 -m venv ~/hay_say/.venvs/so_vits_svc_5; \
     python3.9 -m venv ~/hay_say/.venvs/so_vits_svc_5_server
@@ -58,16 +50,24 @@ RUN ~/hay_say/.venvs/so_vits_svc_5/bin/pip install \
     omegaconf==2.3.0
 
 # Install the dependencies for the Hay Say interface code
-RUN ~/hay_say/.venvs/so_vits_svc_5_server/bin/pip install --no-cache-dir \
-    Flask==2.3.2 \
-    hay-say-common==0.1.0 \
+RUN ~/hay_say/.venvs/so_vits_svc_5_server/bin/pip install \
+    --no-cache-dir \
+    hay-say-common==0.1.4 \
     jsonschema==4.17.3
+
+# Download the Timbre Encoder
+RUN mkdir -p ~/hay_say/temp_downloads/hubert/ && \
+    wget --load-cookies /tmp/cookies.txt "https://docs.google.com/uc?export=download&confirm=$(wget --quiet --save-cookies /tmp/cookies.txt --keep-session-cookies --no-check-certificate 'https://docs.google.com/uc?export=download&id=1UPjQ2LVSIt3o-9QMKMJcdzT8aZRZCI-E' -O- | sed -rn 's/.*confirm=([0-9A-Za-z_]+).*/\1\n/p')&id=1UPjQ2LVSIt3o-9QMKMJcdzT8aZRZCI-E" -O /root/hay_say/temp_downloads/hubert/best_model.pth.tar && rm -rf /tmp/cookies.txt
+
+# Download the pretrained Whisper model
+RUN mkdir -p ~/hay_say/temp_downloads/whisper_pretrain/ && \
+    wget https://openaipublic.azureedge.net/main/whisper/models/345ae4da62f9b3d59415adc60127b97c714f32e89e936602e85993674d08dcb1/medium.pt --directory-prefix=/root/hay_say/temp_downloads/whisper_pretrain/
 
 # Expose port 6577, the port that Hay Say uses for so-vits-svc 5.0
 EXPOSE 6577
 
 # download so-vits-svc 5.0 and checkout a specific commit that is known to work with this Docker file and with Hay Say
-RUN git clone -b main --single-branch -q https://github.com/PlayVoice/so-vits-svc-5.0 ~/hay_say/so_vits_svc_5
+RUN git clone -b bigvgan-mix-v2 --single-branch -q https://github.com/PlayVoice/so-vits-svc-5.0 ~/hay_say/so_vits_svc_5
 WORKDIR /root/hay_say/so_vits_svc_5
 RUN git reset --hard 8f5b747a48f7a67cc8dcd275fcf5ddfb34d38ff3
 
