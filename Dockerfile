@@ -52,7 +52,7 @@ RUN ~/hay_say/.venvs/so_vits_svc_5/bin/pip install \
 # Install the dependencies for the Hay Say interface code
 RUN ~/hay_say/.venvs/so_vits_svc_5_server/bin/pip install \
     --no-cache-dir \
-    hay-say-common==0.1.4 \
+    hay-say-common==0.2.0 \
     jsonschema==4.17.3
 
 # Download the Timbre Encoder
