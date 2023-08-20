@@ -37,7 +37,7 @@ RUN ~/hay_say/.venvs/so_vits_svc_5/bin/pip install \
     fsspec==2023.5.0 \
     ffmpeg-python==0.2.0 \
     praat-parselmouth==0.4.3 \
-    pyworld==0.3.3 \
+    pyworld==0.3.4 \
     matplotlib==3.7.1 \
     soundfile==0.12.1 \
     scikit-learn==1.2.2 \
