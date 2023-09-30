@@ -6,7 +6,7 @@
 FROM nvidia/cuda:11.8.0-base-ubuntu20.04
 ENV TZ=Etc/GMT
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone.
-RUN apt update && apt install -y \
+RUN apt update && apt install -y --no-install-recommends \
     git \
     gcc \
     g++ \
@@ -24,14 +24,15 @@ RUN python3.8 -m venv ~/hay_say/.venvs/so_vits_svc_5; \
 
 # Python virtual environments do not come with wheel, so we must install it. Upgrade pip while
 # we're at it to handle modules that use PEP 517
-RUN ~/hay_say/.venvs/so_vits_svc_5/bin/pip install --no-cache-dir --upgrade pip wheel; \
-    ~/hay_say/.venvs/so_vits_svc_5_server/bin/pip install --no-cache-dir --upgrade pip wheel
+RUN ~/hay_say/.venvs/so_vits_svc_5/bin/pip install --timeout=300 --no-cache-dir --upgrade pip wheel; \
+    ~/hay_say/.venvs/so_vits_svc_5_server/bin/pip install --timeout=300 --no-cache-dir --upgrade pip wheel
 
 # Install all python dependencies for so-vits-svc 5.0.
 # Note: This is done *before* cloning the repository because the dependencies are likely to change less often than the
 # so-vits-svc 5.0 code itself. Cloning the repo after installing the requirements helps the Docker cache optimize build
 # time. See https://docs.docker.com/build/cache
 RUN ~/hay_say/.venvs/so_vits_svc_5/bin/pip install \
+    --timeout=300 \
     --no-cache-dir \
     --extra-index-url https://download.pytorch.org/whl/cu113 \
     fsspec==2023.5.0 \
@@ -51,8 +52,9 @@ RUN ~/hay_say/.venvs/so_vits_svc_5/bin/pip install \
 
 # Install the dependencies for the Hay Say interface code
 RUN ~/hay_say/.venvs/so_vits_svc_5_server/bin/pip install \
+    --timeout=300 \
     --no-cache-dir \
-    hay-say-common==0.2.0 \
+    hay_say_common==1.0.1 \
     jsonschema==4.17.3
 
 # Download the Timbre Encoder
@@ -84,4 +86,4 @@ RUN mkdir -p /root/hay_say/so_vits_svc_5/input; \
 RUN git clone https://github.com/hydrusbeta/so_vits_svc_5_server ~/hay_say/so_vits_svc_5_server/
 
 # Run the Hay Say interface on startup
-CMD ["/bin/sh", "-c", "/root/hay_say/.venvs/so_vits_svc_5_server/bin/python /root/hay_say/so_vits_svc_5_server/main.py"]
+CMD ["/bin/sh", "-c", "/root/hay_say/.venvs/so_vits_svc_5_server/bin/python /root/hay_say/so_vits_svc_5_server/main.py --cache_implementation file"]
