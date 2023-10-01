@@ -54,7 +54,7 @@ RUN ~/hay_say/.venvs/so_vits_svc_5/bin/pip install \
 RUN ~/hay_say/.venvs/so_vits_svc_5_server/bin/pip install \
     --timeout=300 \
     --no-cache-dir \
-    hay_say_common==1.0.1 \
+    hay_say_common==1.0.2 \
     jsonschema==4.17.3
 
 # Download the Timbre Encoder
