@@ -5,7 +5,7 @@
 # 3.5 through 9.0
 FROM nvidia/cuda:11.8.0-base-ubuntu20.04
 ENV TZ=Etc/GMT
-RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone.
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 RUN apt update && apt install -y --no-install-recommends \
     git \
     gcc \
@@ -57,33 +57,63 @@ RUN ~/hay_say/.venvs/so_vits_svc_5_server/bin/pip install \
     hay_say_common==1.0.2 \
     jsonschema==4.17.3
 
-# Download the Timbre Encoder
+# Download the Timbre Encoder (for both v1 and v2)
 RUN mkdir -p ~/hay_say/temp_downloads/hubert/ && \
     wget --load-cookies /tmp/cookies.txt "https://docs.google.com/uc?export=download&confirm=$(wget --quiet --save-cookies /tmp/cookies.txt --keep-session-cookies --no-check-certificate 'https://docs.google.com/uc?export=download&id=1UPjQ2LVSIt3o-9QMKMJcdzT8aZRZCI-E' -O- | sed -rn 's/.*confirm=([0-9A-Za-z_]+).*/\1\n/p')&id=1UPjQ2LVSIt3o-9QMKMJcdzT8aZRZCI-E" -O /root/hay_say/temp_downloads/hubert/best_model.pth.tar && rm -rf /tmp/cookies.txt
 
-# Download the pretrained Whisper model
+# Download the pretrained Whisper model (v1 uses medium.pt, v2 uses large-v2.pt)
 RUN mkdir -p ~/hay_say/temp_downloads/whisper_pretrain/ && \
-    wget https://openaipublic.azureedge.net/main/whisper/models/345ae4da62f9b3d59415adc60127b97c714f32e89e936602e85993674d08dcb1/medium.pt --directory-prefix=/root/hay_say/temp_downloads/whisper_pretrain/
+    wget https://openaipublic.azureedge.net/main/whisper/models/345ae4da62f9b3d59415adc60127b97c714f32e89e936602e85993674d08dcb1/medium.pt --directory-prefix=/root/hay_say/temp_downloads/whisper_pretrain/ && \
+    wget https://openaipublic.azureedge.net/main/whisper/models/81f7c96c852ee8fc832187b0132e569d6c3065a3252ed18e56effd0b6a73e524/large-v2.pt --directory-prefix=/root/hay_say/temp_downloads/whisper_pretrain/
+
+# Download the hubert model (for v2)
+RUN mkdir -p ~/hay_say/temp_downloads/hubert_pretrain/ && \
+    wget https://github.com/bshall/hubert/releases/download/v0.1/hubert-soft-0d54a1f4.pt --directory-prefix=/root/hay_say/temp_downloads/hubert_pretrain/
+
+# Download the crepe pitch extractor (for v2)
+RUN mkdir -p ~/hay_say/temp_downloads/crepe/assets/ && \
+    wget https://github.com/maxrmorrison/torchcrepe/blob/master/torchcrepe/assets/full.pth --directory-prefix=/root/hay_say/temp_downloads/crepe/assets/
+
+# Download the so-vits-svc 5.0 pretrained model (for v2)
+RUN mkdir -p ~/hay_say/temp_downloads/vits_pretrain/ && \
+    wget https://github.com/PlayVoice/so-vits-svc-5.0/releases/download/5.0/sovits5.0.pretrain.pth --directory-prefix=/root/hay_say/temp_downloads/vits_pretrain/
 
 # Expose port 6577, the port that Hay Say uses for so-vits-svc 5.0
 EXPOSE 6577
 
-# download so-vits-svc 5.0 and checkout a specific commit that is known to work with this Docker file and with Hay Say
-RUN git clone -b bigvgan-mix-v2 --single-branch -q https://github.com/PlayVoice/so-vits-svc-5.0 ~/hay_say/so_vits_svc_5
-WORKDIR /root/hay_say/so_vits_svc_5
-RUN git reset --hard 8f5b747a48f7a67cc8dcd275fcf5ddfb34d38ff3
+# download so-vits-svc 5.0 v1 and checkout a specific commit that is known to work with this Docker file and with Hay Say
+RUN git clone -b bigvgan-mix-v2 --single-branch -q https://github.com/PlayVoice/so-vits-svc-5.0 ~/hay_say/so_vits_svc_5_v1
+WORKDIR /root/hay_say/so_vits_svc_5_v1
+RUN git reset --hard 8f5b747a48f7a67cc8dcd275fcf5ddfb34d38ff3 # May 26, 2023
 
-# Move the Timbre Encoder and Whisper model to the expected directories:
-RUN mv /root/hay_say/temp_downloads/hubert/best_model.pth.tar /root/hay_say/so_vits_svc_5/hubert/ && \
-    mv /root/hay_say/temp_downloads/whisper_pretrain/medium.pt /root/hay_say/so_vits_svc_5/whisper_pretrain/
+# download so-vits-svc 5.0 v2 and checkout a specific commit that is known to work with this Docker file and with Hay Say
+RUN git clone -b bigvgan-mix-v2 --single-branch -q https://github.com/PlayVoice/so-vits-svc-5.0 ~/hay_say/so_vits_svc_5_v2
+WORKDIR /root/hay_say/so_vits_svc_5_v2
+RUN git reset --hard 96bc3d547cde8816c04ae5320104eddd6aefb6e8 # Nov 2, 2023
 
-# Create directories that are used by the Hay Say interface code
-RUN mkdir -p /root/hay_say/so_vits_svc_5/input; \
-    mkdir -p /root/hay_say/so_vits_svc_5/ppg; \
-    mkdir -p /root/hay_say/so_vits_svc_5/pit
+# download maxmorrison's torchrepe repo to acquire the file full.pth.
+RUN git clone -b master --single-branch -q https://github.com/maxrmorrison/torchcrepe ~/hay_say/torchcrepe
+
+# Move the Timbre Encoder to the expected directory. The old version of so-vits-svc 5 expects it to be in hubert/ while
+# the new version expects it to be in speaker_pretrain/
+RUN mv /root/hay_say/temp_downloads/hubert/best_model.pth.tar /root/hay_say/so_vits_svc_5_v1/hubert/ && \
+    ln -s /root/hay_say/so_vits_svc_5_v1/hubert/best_model.pth.tar /root/hay_say/so_vits_svc_5_v2/speaker_pretrain/best_model.pth.tar
+
+# Move the two Whisper models to the expected directory:
+RUN mv /root/hay_say/temp_downloads/whisper_pretrain/medium.pt /root/hay_say/so_vits_svc_5_v1/whisper_pretrain/medium.pt && \
+    mv /root/hay_say/temp_downloads/whisper_pretrain/large-v2.pt /root/hay_say/so_vits_svc_5_v2/whisper_pretrain/large-v2.pt
+
+# Move the Hubert model to the expected directory:
+RUN mv /root/hay_say/temp_downloads/hubert_pretrain/* /root/hay_say/so_vits_svc_5_v2/hubert_pretrain/
+
+# Move the Crepe model to the expected directory
+RUN mv /root/hay_say/torchcrepe/torchcrepe/assets/full.pth /root/hay_say/so_vits_svc_5_v2/crepe/assets/
+
+# Move the so-vits-svc 5.0 pretrained model to the expected directory:
+RUN mv /root/hay_say/temp_downloads/vits_pretrain/* /root/hay_say/so_vits_svc_5_v2/vits_pretrain/
 
 # Download the Hay Say interface code
-RUN git clone https://github.com/hydrusbeta/so_vits_svc_5_server ~/hay_say/so_vits_svc_5_server/
+RUN git clone -b main --single-branch https://github.com/hydrusbeta/so_vits_svc_5_server ~/hay_say/so_vits_svc_5_server/
 
 # Run the Hay Say interface on startup
 CMD ["/bin/sh", "-c", "/root/hay_say/.venvs/so_vits_svc_5_server/bin/python /root/hay_say/so_vits_svc_5_server/main.py --cache_implementation file"]
