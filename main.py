@@ -264,7 +264,7 @@ def register_methods(cache):
 
     @app.route('/gpu-info', methods=['GET'])
     def get_gpu_info():
-        return get_gpu_info_from_another_venv(PYTHON_EXECUTABLE)
+        return get_gpu_info_from_another_venv(Svc5Pipeline.PYTHON_EXECUTABLE)
 
     def parse_inputs():
         schema = {
