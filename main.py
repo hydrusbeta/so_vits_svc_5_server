@@ -42,6 +42,9 @@ class Svc5Pipeline:
     ARCHITECTURE_NAME = 'so_vits_svc_5'
     DETERMINATOR_PATH = os.path.join(os.path.dirname(__file__), 'version_determinator.py')
     PTH_FILENAME = 'sovits5.0.pth'
+    PIT_OUTPUT_FILENAME = 'svc_tmp.pit.csv'
+    PPG_OUTPUT_FILENAME = 'svc_tmp.ppg.npy'
+    VEC_OUTPUT_FILENAME = 'svc_tmp.vec.npy'
     TEMP_FILE_EXTENSION = '.flac'
     VENV_BIN = os.path.join(ROOT_DIR, '.venvs', 'so_vits_svc_5', 'bin')
     PYTHON_EXECUTABLE = os.path.join(VENV_BIN, 'python')
@@ -54,9 +57,6 @@ class Svc5Pipeline:
         self.EXECUTE_HUBERT = self.VERSION_CONSTANTS[version_number][self.EXECUTE_HUBERT_KEY]
         self.ARCHITECTURE_ROOT = os.path.join(ROOT_DIR, self.DIR_NAME)
         self.OUTPUT_PATH = os.path.join(self.ARCHITECTURE_ROOT, 'svc_out.wav')
-        self.PIT_OUTPUT_FILENAME = 'svc_tmp.pit.csv'
-        self.PPG_OUTPUT_FILENAME = 'svc_tmp.ppg.npy'
-        self.VEC_OUTPUT_FILENAME = 'svc_tmp.vec.npy'
         self.BASE_CONFIGURATION_FILE = os.path.join(self.ARCHITECTURE_ROOT, 'configs', 'base.yaml')
         self.SVC_EXPORT_SCRIPT_PATH = os.path.join(self.ARCHITECTURE_ROOT, 'svc_export.py')
         self.CONTENT_VECTOR_EXTRACTION_SCRIPT_PATH = os.path.join(self.ARCHITECTURE_ROOT, 'whisper', 'inference.py')
@@ -239,7 +239,8 @@ def register_methods(cache):
         try:
             # todo: I really want to just do this: inputs = parse_inputs() and then pass *inputs to the pipeline. I
             #  still need a reference to just the character, though, to determine the version of so-vits-svc 5 to use.
-            #  Maybe I can just pass *inputs to the factory method (create_from_character)?
+            #  Maybe I can just pass *inputs to the factory method (create_from_character)? Or just make inputs a
+            #  dictionary.
             input_filename_sans_extension, character, pitch_shift, output_filename_sans_extension, gpu_id, session_id \
                 = parse_inputs()
             svc5Pipeline = Svc5Pipeline.create_from_character(character)
@@ -260,6 +261,10 @@ def register_methods(cache):
         }
 
         return json.dumps(response, sort_keys=True, indent=4), code
+
+    @app.route('/gpu-info', methods=['GET'])
+    def get_gpu_info():
+        return get_gpu_info_from_another_venv(PYTHON_EXECUTABLE)
 
     def parse_inputs():
         schema = {
