@@ -7,10 +7,10 @@ import subprocess
 import traceback
 from tempfile import TemporaryDirectory
 
+import hay_say_common as hsc
 import jsonschema
 import soundfile
 from flask import Flask, request
-from hay_say_common import *
 from hay_say_common.cache import Stage
 from jsonschema import ValidationError
 
@@ -46,7 +46,7 @@ class Svc5Pipeline:
     PPG_OUTPUT_FILENAME = 'svc_tmp.ppg.npy'
     VEC_OUTPUT_FILENAME = 'svc_tmp.vec.npy'
     TEMP_FILE_EXTENSION = '.flac'
-    VENV_BIN = os.path.join(ROOT_DIR, '.venvs', 'so_vits_svc_5', 'bin')
+    VENV_BIN = os.path.join(hsc.ROOT_DIR, '.venvs', 'so_vits_svc_5', 'bin')
     PYTHON_EXECUTABLE = os.path.join(VENV_BIN, 'python')
 
     def __init__(self, version_number):
@@ -55,7 +55,7 @@ class Svc5Pipeline:
             raise Exception("Unknown so-vits-svc 5 version: " + version_number)
         self.DIR_NAME = self.VERSION_CONSTANTS[version_number][self.DIRECTORY_KEY]
         self.EXECUTE_HUBERT = self.VERSION_CONSTANTS[version_number][self.EXECUTE_HUBERT_KEY]
-        self.ARCHITECTURE_ROOT = os.path.join(ROOT_DIR, self.DIR_NAME)
+        self.ARCHITECTURE_ROOT = os.path.join(hsc.ROOT_DIR, self.DIR_NAME)
         self.OUTPUT_PATH = os.path.join(self.ARCHITECTURE_ROOT, 'svc_out.wav')
         self.BASE_CONFIGURATION_FILE = os.path.join(self.ARCHITECTURE_ROOT, 'configs', 'base.yaml')
         self.SVC_EXPORT_SCRIPT_PATH = os.path.join(self.ARCHITECTURE_ROOT, 'svc_export.py')
@@ -103,7 +103,7 @@ class Svc5Pipeline:
         self.infer(character, input_filename_sans_extension, pitch_shift, gpu_id, temp_dir)
 
     def export_pth_file_if_needed(self, character, gpu_id):
-        character_dir = get_model_path(self.ARCHITECTURE_NAME, character)
+        character_dir = hsc.character_dir(self.ARCHITECTURE_NAME, character)
         desired_pth_path = os.path.join(character_dir, self.PTH_FILENAME)
 
         if not os.path.isfile(desired_pth_path):
@@ -111,7 +111,7 @@ class Svc5Pipeline:
                 '--config', self.get_config_path(character),
                 '--checkpoint_path', self.get_checkpoint_path(character),
             ]
-            env = select_hardware(gpu_id)
+            env = hsc.select_hardware(gpu_id)
             subprocess.run([self.PYTHON_EXECUTABLE, self.SVC_EXPORT_SCRIPT_PATH, *arguments],
                            env=env,
                            cwd=self.ARCHITECTURE_ROOT)
@@ -119,7 +119,7 @@ class Svc5Pipeline:
             shutil.copyfile(current_pth_path, desired_pth_path)
 
     def get_config_path(self, character):
-        character_dir = get_model_path(self.ARCHITECTURE_NAME, character)
+        character_dir = hsc.character_dir(self.ARCHITECTURE_NAME, character)
         config_filename = self.get_config_filename(character_dir)
         return os.path.join(character_dir, config_filename)
 
@@ -137,7 +137,7 @@ class Svc5Pipeline:
 
     @classmethod
     def get_checkpoint_path(cls, character):
-        character_dir = get_model_path(cls.ARCHITECTURE_NAME, character)
+        character_dir = hsc.character_dir(cls.ARCHITECTURE_NAME, character)
         checkpoint_filename = cls.get_checkpoint_filename(character_dir)
         return os.path.join(character_dir, checkpoint_filename)
 
@@ -157,7 +157,7 @@ class Svc5Pipeline:
             '--wav', os.path.join(temp_dir, input_filename_sans_extension + self.TEMP_FILE_EXTENSION),
             '--ppg', os.path.join(temp_dir, self.PPG_OUTPUT_FILENAME)
         ]
-        env = select_hardware(gpu_id)
+        env = hsc.select_hardware(gpu_id)
         env = self.define_python_path(env)
         subprocess.run([self.PYTHON_EXECUTABLE, self.CONTENT_VECTOR_EXTRACTION_SCRIPT_PATH, *arguments],
                        env=env,
@@ -174,7 +174,7 @@ class Svc5Pipeline:
             '--wav', os.path.join(temp_dir, input_filename_sans_extension + self.TEMP_FILE_EXTENSION),
             '--pit', os.path.join(temp_dir, self.PIT_OUTPUT_FILENAME)
         ]
-        env = select_hardware(gpu_id)
+        env = hsc.select_hardware(gpu_id)
         subprocess.run([self.PYTHON_EXECUTABLE, self.PITCH_EXTRACTION_SCRIPT, *arguments],
                        env=env,
                        cwd=self.ARCHITECTURE_ROOT)
@@ -184,7 +184,7 @@ class Svc5Pipeline:
             '--wav', os.path.join(temp_dir, input_filename_sans_extension + self.TEMP_FILE_EXTENSION),
             '--vec', os.path.join(temp_dir, self.VEC_OUTPUT_FILENAME)
         ]
-        env = select_hardware(gpu_id)
+        env = hsc.select_hardware(gpu_id)
         subprocess.run([self.PYTHON_EXECUTABLE, self.HIDDEN_UNIT_EXTRACTION_SCRIPT_PATH, *arguments],
                        env=env,
                        cwd=self.ARCHITECTURE_ROOT)
@@ -201,17 +201,17 @@ class Svc5Pipeline:
             *(['--vec', os.path.join(temp_dir, self.VEC_OUTPUT_FILENAME)] if self.version_number == 2 else [None, None]),
         ]
         arguments = [argument for argument in arguments if argument]  # Removes all "None" objects in the list.
-        env = select_hardware(gpu_id)
+        env = hsc.select_hardware(gpu_id)
         subprocess.run([self.PYTHON_EXECUTABLE, self.INFERENCE_SCRIPT_PATH, *arguments],
                        env=env,
                        cwd=self.ARCHITECTURE_ROOT)
 
     def get_pth_path(self, character):
-        character_dir = get_model_path(self.ARCHITECTURE_NAME, character)
+        character_dir = hsc.character_dir(self.ARCHITECTURE_NAME, character)
         return os.path.join(character_dir, self.PTH_FILENAME)
 
     def get_spk_path(self, character):
-        character_dir = get_model_path(self.ARCHITECTURE_NAME, character)
+        character_dir = hsc.character_dir(self.ARCHITECTURE_NAME, character)
         singer_dir = os.path.join(character_dir, 'singer')
         spk_filename = self.get_spk_filename(singer_dir)
         return os.path.join(singer_dir, spk_filename)
@@ -227,7 +227,7 @@ class Svc5Pipeline:
             return potential_names[0]
 
     def copy_output(self, output_filename_sans_extension, session_id, temp_dir):
-        array_output, sr_output = read_audio(self.OUTPUT_PATH)
+        array_output, sr_output = hsc.read_audio(self.OUTPUT_PATH)
         cache.save_audio_to_cache(Stage.OUTPUT, session_id, output_filename_sans_extension, array_output, sr_output)
 
 
@@ -246,13 +246,13 @@ def register_methods(cache):
             svc5Pipeline = Svc5Pipeline.create_from_character(character)
             svc5Pipeline.execute_pipeline(input_filename_sans_extension, character, pitch_shift,
                                           output_filename_sans_extension, gpu_id, session_id)
-            clean_up(get_temp_files())
+            hsc.clean_up(get_temp_files())
         except BadInputException:
             code = 400
             message = traceback.format_exc()
         except Exception:
             code = 500
-            message = construct_full_error_message('', get_temp_files())
+            message = hsc.construct_full_error_message('', get_temp_files())
 
         # The message may contain quotes and curly brackets which break JSON syntax, so base64-encode the message.
         message = base64.b64encode(bytes(message, 'utf-8')).decode('utf-8')
@@ -264,7 +264,7 @@ def register_methods(cache):
 
     @app.route('/gpu-info', methods=['GET'])
     def get_gpu_info():
-        return get_gpu_info_from_another_venv(Svc5Pipeline.PYTHON_EXECUTABLE)
+        return hsc.get_gpu_info_from_another_venv(Svc5Pipeline.PYTHON_EXECUTABLE)
 
     def parse_inputs():
         schema = {
@@ -318,13 +318,13 @@ def register_methods(cache):
 def parse_arguments():
     parser = argparse.ArgumentParser(prog='main.py',
                                      description='A webservice interface for voice conversion with so-vits-svc 5.0')
-    parser.add_argument('--cache_implementation', default='file', choices=cache_implementation_map.keys(),
+    parser.add_argument('--cache_implementation', default='file', choices=hsc.cache_implementation_map.keys(),
                         help='Selects an implementation for the audio cache, e.g. saving them to files or to a database.')
     return parser.parse_args()
 
 
 if __name__ == '__main__':
     args = parse_arguments()
-    cache = select_cache_implementation(args.cache_implementation)
+    cache = hsc.select_cache_implementation(args.cache_implementation)
     register_methods(cache)
     app.run(host='0.0.0.0', port=6577)
