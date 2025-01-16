@@ -36,9 +36,9 @@ RUN mkdir -p ~/hay_say/temp_downloads/hubert/ && \
 # Download the pretrained Whisper model (v1 uses medium.pt, v2 uses large-v2.pt)
 # Note: In my experience, this step takes a REALLY long time (~12.5 hours). You may want to download these files ahead
 # of time and use the COPY directives below instead.
- RUN mkdir -p ~/hay_say/temp_downloads/whisper_pretrain/ && \
-     wget https://openaipublic.azureedge.net/main/whisper/models/345ae4da62f9b3d59415adc60127b97c714f32e89e936602e85993674d08dcb1/medium.pt --directory-prefix=$HOME_DIR/hay_say/temp_downloads/whisper_pretrain/ && \
-     wget https://openaipublic.azureedge.net/main/whisper/models/81f7c96c852ee8fc832187b0132e569d6c3065a3252ed18e56effd0b6a73e524/large-v2.pt --directory-prefix=$HOME_DIR/hay_say/temp_downloads/whisper_pretrain/
+RUN mkdir -p ~/hay_say/temp_downloads/whisper_pretrain/ && \
+    wget https://openaipublic.azureedge.net/main/whisper/models/345ae4da62f9b3d59415adc60127b97c714f32e89e936602e85993674d08dcb1/medium.pt --directory-prefix=$HOME_DIR/hay_say/temp_downloads/whisper_pretrain/ && \
+    wget https://openaipublic.azureedge.net/main/whisper/models/81f7c96c852ee8fc832187b0132e569d6c3065a3252ed18e56effd0b6a73e524/large-v2.pt --directory-prefix=$HOME_DIR/hay_say/temp_downloads/whisper_pretrain/
 #COPY --chown=$LIMITED_USER:$LIMITED_USER medium.pt $HOME_DIR/hay_say/temp_downloads/whisper_pretrain/
 #COPY --chown=$LIMITED_USER:$LIMITED_USER large-v2.pt $HOME_DIR/hay_say/temp_downloads/whisper_pretrain/
 
